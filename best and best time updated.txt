@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Set the source and destination directories
+src_dir="/home/vagrant/thirdtrial/history"
+dest_dir="/home/vagrant/thirdtrial/new"
+tar_file="/home/vagrant/thirdtrial/tar1/new.tar"
+
+# Sync the destination directory with the source directory, copying only new or modified files
+rsync -av --update --progress "$src_dir"/ "$dest_dir"/
+
+# Find files in the destination directory that are newer than the tar file and not in the tar file
+find "$dest_dir" -type f -newer "$tar_file" ! -path "$tar_file" -print0 | while IFS= read -r -d $'\0' file; do
+    # Get the file name without the path
+    file_name=$(basename "$file")
+
+    # Add the file to the tar file
+    tar -rf "$tar_file" "$file"
+
+    # Print a message indicating which file was added to the tar file
+    echo "Added $file to $tar_file"
+done
+
+# Find files in the source directory that are not in the destination directory
+find "$src_dir" -type f -not -path "$dest_dir/*" -print0 | while IFS= read -r -d $'\0' file; do
+    # Get the file name without the path
+    file_name=$(basename "$file")
+
+    # Check if the file already exists in the destination directory
+    if [[ -e "$dest_dir/$file_name" ]]; then
+        continue
+    fi
+
+    # Copy the file to the destination directory
+    cp "$file" "$dest_dir"
+
+    # Add the file to the tar file
+    tar -rf "$tar_file" "$dest_dir/$file_name"
+
+    # Print a message indicating which file was copied and added to the tar file
+    echo "Copied $file to $dest_dir and added to $tar_file"
+done
